@@ -14,6 +14,7 @@
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
 
+import math
 from .. import deserialize, BCDataStream, util
 from ..deserialize import opcodes
 
@@ -48,6 +49,8 @@ SCRIPT_TYPE_BURN = 4
 SCRIPT_TYPE_MULTISIG = 5
 SCRIPT_TYPE_P2SH = 6
 
+# This is used to peek at the tx data for SegWit (version=1, marker=0 and flag=1)
+SW_TX_HEAD = '01000000' '00' '01'.decode('hex')
 
 class BaseChain(object):
     POLICY_ATTRS = ['magic', 'name', 'code3', 'address_version', 'decimals', 'script_addr_vers']
@@ -96,6 +99,7 @@ class BaseChain(object):
         ds.write_uint32(block['nBits'])
         ds.write_uint32(block['nNonce'])
 
+    # The original non-segwit transaction
     def ds_serialize_transaction(chain, ds, tx):
         ds.write_int32(tx['version'])
         ds.write_compact_size(len(tx['txIn']))
@@ -106,11 +110,32 @@ class BaseChain(object):
             chain.ds_serialize_txout(ds, txout)
         ds.write_uint32(tx['lockTime'])
 
+    # Segwit serialisation format
+    def ds_serialize_tx_segwit(chain, ds, tx):
+        ds.write_int32(tx['version'])
+        ds.write_int8(0)
+        ds.write_int8(1)
+        ds.write_compact_size(len(tx['txIn']))
+        for txin in tx['txIn']:
+            chain.ds_serialize_txin(ds, txin)
+        ds.write_compact_size(len(tx['txOut']))
+        for txout in tx['txOut']:
+            chain.ds_serialize_txout(ds, txout)
+        chain.ds_serialize_witness(ds, tx)
+        ds.write_uint32(tx['lockTime'])
+
     def ds_serialize_txin(chain, ds, txin):
         ds.write(txin['prevout_hash'])
         ds.write_uint32(txin['prevout_n'])
         ds.write_string(txin['scriptSig'])
         ds.write_uint32(txin['sequence'])
+
+    def ds_serialize_witness(chain, ds, tx):
+        for i in tx['txIn']:
+            ds.write_compact_size(len(i['txWitness']))
+            for wit in i['txWitness']:
+                ds.write_compact_size(len(wit))
+                ds.write(wit)
 
     def ds_serialize_txout(chain, ds, txout):
         ds.write_int64(txout['value'])
@@ -128,13 +153,23 @@ class BaseChain(object):
 
     def serialize_transaction(chain, tx):
         ds = BCDataStream.BCDataStream()
-        chain.ds_serialize_transaction(ds, tx)
+        witness = False
+        for i in tx['txIn']:
+            if len(i['txWitness']) != 0:
+                witness = True
+        if witness:
+            chain.ds_serialize_tx_segwit(ds, tx)
+        else:
+            chain.ds_serialize_transaction(ds, tx)
         return ds.input
 
     def ds_block_header_hash(chain, ds):
         return chain.block_header_hash(
             ds.input[ds.read_cursor : ds.read_cursor + 80])
 
+    # This is a misnomer; pre-segwit this was the txid, which is now the case for
+    # SegWit too when using tx['__data__'].
+    # The real txhash on segwit tx can be found by re-serializing the transaction
     def transaction_hash(chain, binary_tx):
         return util.double_sha256(binary_tx)
 
