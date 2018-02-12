@@ -137,6 +137,10 @@ def parse_Transaction(vds, has_nTime=False):
   d['__data__'] = tx_data
   # Get SegWit vsize too
   d['vsize'] = int(math.ceil((len(tx_data) * 3 + d['size']) / 4.0))
+
+  # Litecoin Cash: Ignore segwit tx
+  if (flag):
+    return None
   return d
 
 def read_witness_data(vds, txin_size, d):
