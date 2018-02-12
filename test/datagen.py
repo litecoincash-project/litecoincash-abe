@@ -85,7 +85,7 @@ class Gen(object):
         return gen.encode_script(opcodes.OP_HASH160, hash, opcodes.OP_EQUAL)
 
     def txin(gen, **kwargs):
-        txin = { 'sequence': 0xffffffff, 'pos': 0 }
+        txin = { 'sequence': 0xffffffff, 'pos': 0, 'txWitness': [] }
         txin.update(kwargs)
         if 'prevout' in txin:
             txin['prevout_hash'] = txin['prevout']['hash']

@@ -5,10 +5,13 @@
 from BCDataStream import *
 from enumeration import Enumeration
 from base58 import public_key_to_bc_address, hash_160_to_bc_address
-import logging
+from decimal import Decimal
+import math
+import hashlib
 import socket
+import binascii
 import time
-from util import short_hex, long_hex
+from util import short_hex, long_hex, double_sha256
 import struct
 
 def parse_CAddress(vds):
@@ -68,43 +71,95 @@ def parse_TxOut(vds):
   d['scriptPubKey'] = vds.read_bytes(vds.read_compact_size())
   return d
 
-def deserialize_TxOut(d, owner_keys=None):
-  result =  "TxOut: value: %f"%(d['value']/1.0e8,)
-  pk = extract_public_key(d['scriptPubKey'])
-  result += " pubkey: "+pk
-  result += " Script: "+decode_script(d['scriptPubKey'])
-  if owner_keys is not None:
-    if pk in owner_keys: result += " Own: True"
-    else: result += " Own: False"
+def deserialize_TxOut(d, owner_keys=None, version='\x00'):
+  result = {}
+  result['value'] = Decimal(d['value']) / Decimal(1.0e8)
+  pk = extract_public_key(d['scriptPubKey'], version)
+  addr_list = []
+  if type(pk) is list:
+    addr_list = pk
+  elif pk:
+    addr_list = [pk]
+  result['scriptPubKey']={}
+  result['scriptPubKey']['addresses'] = addr_list
   return result
 
 def parse_Transaction(vds, has_nTime=False):
+  #For format see transaction serialization
+  #in https://bitcoincore.org/en/segwit_wallet_dev/
   d = {}
+  flag = 0
+  #We need to exclude witness and flag data
+  #for txid calculation
+  tx_data = ''
+  # bitcointools uses len(vds.input), but this assumes vds contains a single tx!
   start_pos = vds.read_cursor
+
+  tx_data_pos = vds.read_cursor
   d['version'] = vds.read_int32()
   if has_nTime:
     d['nTime'] = vds.read_uint32()
+  tx_data += vds.input[tx_data_pos:vds.read_cursor]
+
+  tx_data_pos = vds.read_cursor
   n_vin = vds.read_compact_size()
+  if (n_vin == 0):
+    flag = vds.read_compact_size()
+    if (flag != 1):
+      raise Exception('Segwit error: expecting 1 got {}'.format(flag))
+
+  if (flag):
+    tx_data_pos = vds.read_cursor
+    n_vin = vds.read_compact_size()
+
   d['txIn'] = []
   for i in xrange(n_vin):
     d['txIn'].append(parse_TxIn(vds))
+    d['txIn'][i]['txWitness'] = []
   n_vout = vds.read_compact_size()
   d['txOut'] = []
   for i in xrange(n_vout):
     d['txOut'].append(parse_TxOut(vds))
+
+  tx_data += vds.input[tx_data_pos:vds.read_cursor]
+
+  if (flag):
+    read_witness_data(vds, n_vin, d)
+
+  tx_data_pos = vds.read_cursor
   d['lockTime'] = vds.read_uint32()
-  d['__data__'] = vds.input[start_pos:vds.read_cursor]
+  tx_data += vds.input[tx_data_pos:vds.read_cursor]
+
+  d['size'] = vds.read_cursor - start_pos
+
+  # Now we know the tx end pos, read the actual tx hash (not txid)
+  d['__hash__'] = double_sha256(vds.input[start_pos:vds.read_cursor])
+  d['__data__'] = tx_data
+  # Get SegWit vsize too
+  d['vsize'] = int(math.ceil((len(tx_data) * 3 + d['size']) / 4.0))
   return d
 
-def deserialize_Transaction(d, transaction_index=None, owner_keys=None, print_raw_tx=False):
-  result = "%d tx in, %d out\n"%(len(d['txIn']), len(d['txOut']))
+def read_witness_data(vds, txin_size, d):
+  for i in range(0, txin_size):
+    no_items = vds.read_compact_size()
+    for j in range(0, no_items):
+      item_size = vds.read_compact_size()
+      #Read the witness item
+      d['txIn'][i]['txWitness'].append(vds.read_bytes(item_size))
+
+def deserialize_Transaction(d, transaction_index=None, owner_keys=None,
+                            print_raw_tx=False, version='\x00'):
+  result = {}
+  result['vin'] = []
+  result['vout'] = []
+  result['size'] = d['size']
   for txIn in d['txIn']:
-    result += deserialize_TxIn(txIn, transaction_index) + "\n"
-  for txOut in d['txOut']:
-    result += deserialize_TxOut(txOut, owner_keys) + "\n"
-  if print_raw_tx == True:
-      result += "Transaction hex value: " + d['__data__'].encode('hex') + "\n"
-  
+    result['vin'].append(deserialize_TxIn(txIn, transaction_index))
+  for (idx,txOut) in enumerate(d['txOut']):
+    txout = deserialize_TxOut(txOut, owner_keys, version)
+    txout['n'] = idx
+    result['vout'].append(txout)
+  result['txid'] = binascii.hexlify(hashlib.sha256(hashlib.sha256(d['__data__']).digest()).digest()[::-1])
   return result
 
 def parse_MerkleTx(vds):
@@ -193,16 +248,17 @@ def parse_Block(vds):
     d['transactions'].append(parse_Transaction(vds))
 
   return d
-  
-def deserialize_Block(d, print_raw_tx=False):
-  result = "Time: "+time.ctime(d['nTime'])+" Nonce: "+str(d['nNonce'])
-  result += "\nnBits: 0x"+hex(d['nBits'])
-  result += "\nhashMerkleRoot: 0x"+d['hashMerkleRoot'][::-1].encode('hex_codec')
-  result += "\nPrevious block: "+d['hashPrev'][::-1].encode('hex_codec')
-  result += "\n%d transactions:\n"%len(d['transactions'])
+
+def deserialize_Block(d, print_raw_tx=False, version='\x00'):
+  result = []
+  # block timestamps are unreliable
+  # make sure it is less than current time
+  current_time = int(time.time())
+  block_time =  d['nTime'] if  d['nTime'] < current_time else current_time
   for t in d['transactions']:
-    result += deserialize_Transaction(t, print_raw_tx=print_raw_tx)+"\n"
-  result += "\nRaw block header: "+d['__header__'].encode('hex_codec')
+    tx = deserialize_Transaction(t, print_raw_tx=print_raw_tx, version=version)
+    tx['time'] = block_time
+    result.append(tx)
   return result
 
 def parse_BlockLocator(vds):
@@ -246,36 +302,20 @@ def script_GetOp(bytes):
     if opcode <= opcodes.OP_PUSHDATA4:
       nSize = opcode
       if opcode == opcodes.OP_PUSHDATA1:
-        if i + 1 > len(bytes):
-          vch = "_INVALID_NULL"
-          i = len(bytes)
-        else:
-          nSize = ord(bytes[i])
-          i += 1
+        nSize = ord(bytes[i])
+        i += 1
       elif opcode == opcodes.OP_PUSHDATA2:
-        if i + 2 > len(bytes):
-          vch = "_INVALID_NULL"
-          i = len(bytes)
-        else:
-          (nSize,) = struct.unpack_from('<H', bytes, i)
-          i += 2
+        (nSize,) = struct.unpack_from('<H', bytes, i)
+        i += 2
       elif opcode == opcodes.OP_PUSHDATA4:
-        if i + 4 > len(bytes):
-          vch = "_INVALID_NULL"
-          i = len(bytes)
-        else:
-          (nSize,) = struct.unpack_from('<I', bytes, i)
-          i += 4
+        (nSize,) = struct.unpack_from('<I', bytes, i)
+        i += 4
       if i+nSize > len(bytes):
         vch = "_INVALID_"+bytes[i:]
         i = len(bytes)
       else:
         vch = bytes[i:i+nSize]
         i += nSize
-    elif opcodes.OP_1 <= opcode <= opcodes.OP_16:
-      vch = chr(opcode - opcodes.OP_1 + 1)
-    elif opcode == opcodes.OP_1NEGATE:
-      vch = chr(255)
 
     yield (opcode, vch)
 
@@ -309,8 +349,8 @@ def match_decoded(decoded, to_match):
 def extract_public_key(bytes, version='\x00'):
   try:
     decoded = [ x for x in script_GetOp(bytes) ]
-  except struct.error:
-    return "(None)"
+  except (struct.error, IndexError):
+    return None
 
   # non-generated TxIn transactions push a signature
   # (seventy-something bytes) and then their public key
@@ -332,10 +372,11 @@ def extract_public_key(bytes, version='\x00'):
     return hash_160_to_bc_address(decoded[2][1], version=version)
 
   # BIP11 TxOuts look like one of these:
+  # Note that match_decoded is dumb, so OP_1 actually matches OP_1/2/3/etc:
   multisigs = [
-    [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_1, opcodes.OP_CHECKMULTISIG ],
-    [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_2, opcodes.OP_CHECKMULTISIG ],
-    [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_3, opcodes.OP_CHECKMULTISIG ]
+    [ opcodes.OP_1, opcodes.OP_PUSHDATA4, opcodes.OP_1, opcodes.OP_CHECKMULTISIG ],
+    [ opcodes.OP_2, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_2, opcodes.OP_CHECKMULTISIG ],
+    [ opcodes.OP_3, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_3, opcodes.OP_CHECKMULTISIG ]
   ]
   for match in multisigs:
     if match_decoded(decoded, match):
@@ -345,6 +386,7 @@ def extract_public_key(bytes, version='\x00'):
   # HASH160 20 BYTES:... EQUAL
   match = [ opcodes.OP_HASH160, 0x14, opcodes.OP_EQUAL ]
   if match_decoded(decoded, match):
-    return hash_160_to_bc_address(decoded[1][1], version="\x05")
+    script_version = '\x05' if version=='\x00' else '\xC4'
+    return hash_160_to_bc_address(decoded[1][1], version=script_version)
 
   return "(None)"

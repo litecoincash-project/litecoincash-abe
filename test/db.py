@@ -210,7 +210,7 @@ class PostgresDB(ServerDB):
                 os.path.join(db.bindir, 'postgres'),
                 '-D', str(db.installation_dir),
                 '-c', 'listen_addresses=',
-                '-c', 'unix_socket_directory=.'])
+                '-c', 'unix_socket_directories=.'])
 
         import time, psycopg2
         tries = 30
