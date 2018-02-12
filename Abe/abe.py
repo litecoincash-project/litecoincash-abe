@@ -1793,7 +1793,7 @@ def format_satoshis(satoshis, chain):
         return ''
     if satoshis < 0:
         return '-' + format_satoshis(-satoshis, chain)
-    satoshis = int(satoshis)
+    satoshis = int(10 * satoshis)
     integer = satoshis / coin
     frac = satoshis % coin
     return (str(integer) +
