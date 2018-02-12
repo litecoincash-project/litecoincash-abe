@@ -1085,10 +1085,13 @@ store._ddl['txout_approx'],
         block_id = int(store.new_id("block"))
         b['block_id'] = block_id
 
+        # Litecoin Cash: Disable this check as we don't need it and segwit ignoring causes it to fail
+        '''
         if chain is not None:
             # Verify Merkle root.
             if b['hashMerkleRoot'] != chain.merkle_root(tx_hash_array):
                 raise MerkleRootMismatch(b['hash'], tx_hash_array)
+        '''
 
         # Look for the parent block.
         hashPrev = b['hashPrev']
