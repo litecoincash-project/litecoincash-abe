@@ -44,7 +44,7 @@ h3 {
 	}
 td {
     color:#333;
-    padding: 5px 30px 5px 30px;
+    padding: 4px 12px;
     border: 1px solid #eee;
 }
 th {
@@ -72,8 +72,7 @@ table {
 /*######## Smart Green d7d6d5 ########*/
 
 form {
-    margin: 45px 0px 35px 0px;
-    max-width: 700px;
+    margin: 16px 0;
     background: #fff;
     padding: 0px;
     color: #333;
@@ -111,7 +110,7 @@ form label>span {
 }
 input {
     color: #555;
-    width: 100%;
+    width: 80%;
     padding: 7px;
     margin: -40px 0px 0px 0px;
     background: #fff;
@@ -123,11 +122,11 @@ input {
 }
 button {
     color: #fff;
-    width: 200px;
-    padding: 5px;
-    margin: 3px 0px 0px 0px;
+    width: 18%;
+    padding: 7px;
+    margin: 0 0 0 4px;
     background: #5eae4b;
-    border: 1px solid #aeadac;
+    border: 1px solid #999;
     outline: 0;
     border-radius:5px;
     -webkit-box-shadow: inset 1px 1px 2px rgba(238, 238, 238, 0.2);
