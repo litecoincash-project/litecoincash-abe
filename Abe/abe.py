@@ -792,6 +792,10 @@ class Abe:
         tx = abe.store.export_tx(tx_hash=tx_hash.lower())
         if tx is None:
             return 'ERROR: Transaction does not exist.'  # BBE compatible
+
+        for txout in tx['out']:
+            txout['value'] *= 10
+
         return json.dumps(tx, sort_keys=True, indent=2)
 
     def handle_address(abe, page):
