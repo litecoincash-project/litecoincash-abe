@@ -1091,8 +1091,7 @@ store._ddl['txout_approx'],
             # Verify Merkle root.
             if b['hashMerkleRoot'] != chain.merkle_root(tx_hash_array):
                 # raise MerkleRootMismatch(b['hash'], tx_hash_array)
-                print("Mungling a merkle root hash")
-                b['hashMerkleRoot'] = chain.merkle_root(tx_hash_array)
+                print("Ignoring a merkle root hash")
 
         # Look for the parent block.
         hashPrev = b['hashPrev']
