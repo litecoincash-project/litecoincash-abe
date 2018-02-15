@@ -2027,7 +2027,7 @@ store._ddl['txout_approx'],
                     'value': int(satoshis),
                     'scriptPubKey': store.binout(scriptPubKey)}
             else:
-                coin = 10 ** decimals
+                coin = 10 ** (decimals - 1)
                 satoshis = int(satoshis)
                 integer = satoshis / coin
                 frac = satoshis % coin
