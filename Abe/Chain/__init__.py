@@ -87,7 +87,7 @@ class BaseChain(object):
             if tx is not None:
                 d['transactions'].append(tx)
             else:
-                print("Skipped possible segwit transaction: {}".format(tx['__hash__']))
+                print("Skipped possible segwit transaction")
         return d
 
     def ds_serialize_block(chain, ds, block):

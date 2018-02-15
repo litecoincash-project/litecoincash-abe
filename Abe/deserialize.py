@@ -140,6 +140,7 @@ def parse_Transaction(vds, has_nTime=False):
 
   # Litecoin Cash: Ignore segwit tx
   if (flag):
+    print(d)
     return None
   return d
 
