@@ -2032,7 +2032,7 @@ store._ddl['txout_approx'],
                 integer = satoshis / coin
                 frac = satoshis % coin
                 txout = {
-                    'value': ("%%d.%%0%dd" % (decimals,)) % (integer, frac),
+                    'value': ("%%d.%%0%dd" % (decimals-1,)) % (integer, frac),
                     'raw_scriptPubKey': store.binout_hex(scriptPubKey)}
             txouts.append(txout)
 
