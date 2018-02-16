@@ -82,9 +82,9 @@ class BaseChain(object):
         d['transactions'] = []
         nTransactions = ds.read_compact_size()
         for i in xrange(nTransactions):
-            tx = chain.ds_parse_transaction(ds)
-            if tx is not None:
-                d['transactions'].append(tx)
+            # Litecoin Cash: Check for None being returned (ignore segwit)
+            d['transactions'].append(chain.ds_parse_transaction(ds))
+
         return d
 
     def ds_serialize_block(chain, ds, block):

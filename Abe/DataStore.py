@@ -1086,12 +1086,12 @@ store._ddl['txout_approx'],
         b['block_id'] = block_id
 
         # Litecoin Cash: Disable this check as we don't need it and segwit ignoring causes it to fail
-        '''
+
         if chain is not None:
             # Verify Merkle root.
             if b['hashMerkleRoot'] != chain.merkle_root(tx_hash_array):
-                raise MerkleRootMismatch(b['hash'], tx_hash_array)
-        '''
+                # raise MerkleRootMismatch(b['hash'], tx_hash_array)
+                print("Ignoring a merkle root hash")
 
         # Look for the parent block.
         hashPrev = b['hashPrev']
@@ -2027,12 +2027,12 @@ store._ddl['txout_approx'],
                     'value': int(satoshis),
                     'scriptPubKey': store.binout(scriptPubKey)}
             else:
-                coin = 10 ** decimals
+                coin = 10 ** (decimals - 1)
                 satoshis = int(satoshis)
                 integer = satoshis / coin
                 frac = satoshis % coin
                 txout = {
-                    'value': ("%%d.%%0%dd" % (decimals,)) % (integer, frac),
+                    'value': ("%%d.%%0%dd" % (decimals-1,)) % (integer, frac),
                     'raw_scriptPubKey': store.binout_hex(scriptPubKey)}
             txouts.append(txout)
 
