@@ -15,15 +15,49 @@
    License along with this program.  If not, see
    <http://www.gnu.org/licenses/agpl.html>.
  */
-td, th {
-    font-family: Verdana, Helvetica, sans-serif;
-    margin: 0;
-    padding: 0 1ex;
+html{overflow-y: scroll; font-family: Tahoma, Geneva, sans-serif; font-size:12px;}
+body {background:#fff;border:0;margin-left:35px}
+img{
+    	margin: 10px 10px -9px 0px;
+	height: auto;
+	border: 0;
+	outline: 0;
+   	width: auto\9; /* ie8 */
 }
+p {
+    color:#333;
+}
+h1 {
+	font-size:28px;
+	font-weight:600;
+	color:#333;
+	}
+h2 {
+	font-size:14px;
+	font-weight:normal;
+	color:#333;
+	}
+h3 {
+	font-size:20px;
+	font-weight:normal;
+	color:#333;
+	}
 td {
-    border-width: 1px;
-    border-style: solid;
+    color:#333;
+    padding: 4px 12px;
+    border: 1px solid #eee;
 }
+th {
+    color:#333;
+    background: #fff;
+    font-weight:normal;
+    border-width:1px;
+    border-style:solid;
+#    border-color:#5eae4b;
+    padding: 5px 30px 5px 30px;
+    border-radius: 3px;
+}
+
 table {
     border-spacing: 0;
 }
@@ -34,3 +68,96 @@ table {
     opacity: 0.5; /* standard */
     filter: alpha(opacity = 50); /* MSIE */
 }
+
+/*######## Smart Green d7d6d5 ########*/
+
+form {
+    margin: 16px 0;
+    background: #fff;
+    padding: 0px;
+    color: #333;
+    border-radius: 0px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+}
+form h1 {
+    padding: 10px;
+    margin: 10px;
+    width: 600px;
+    color: #fff;
+    background: #9DC45F;
+    text-shadow: 1px 1px 1px #949494;
+    border-radius: 0px;
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+    border-bottom:1px solid #89AF4C;
+
+}
+form h1>span {
+    display: block;
+    font-size: 11px;
+    color: #FFF;
+}
+
+form label {
+    display: block;
+    margin: 0px 0px 5px;
+}
+form label>span {
+    float: left;
+    margin-top: 0px;
+    color: #5E5E5E;
+}
+input {
+    color: #555;
+    width: 80%;
+    padding: 7px;
+    margin: -40px 0px 0px 0px;
+    background: #fff;
+    border: 1px solid #aeadac;
+    outline: 0;
+    border-radius:5px;
+    -webkit-box-shadow: inset 1px 1px 2px rgba(238, 238, 238, 0.2);
+    box-shadow: inset 1px 1px 2px rgba(238, 238, 238, 0.2);
+}
+button {
+    color: #fff;
+    width: 18%;
+    padding: 7px;
+    margin: 0 0 0 4px;
+    background: #5eae4b;
+    border: 1px solid #999;
+    outline: 0;
+    border-radius:5px;
+    -webkit-box-shadow: inset 1px 1px 2px rgba(238, 238, 238, 0.2);
+    box-shadow: inset 1px 1px 2px rgba(238, 238, 238, 0.2);
+}
+form textarea{
+    height:100px;
+    padding-top: 10px;
+}
+form select {
+    background: url('down-arrow.png') no-repeat right, -moz-linear-gradient(top, #FBFBFB 0%, #E9E9E9 100%);
+    background: url('down-arrow.png') no-repeat right, -webkit-gradient(linear, left top, left bottom, color-stop(0%,#FBFBFB), color-stop(100%,#E9E9E9));
+   appearance:none;
+    -webkit-appearance:none;
+   -moz-appearance: none;
+    text-indent: 0.01px;
+    text-overflow: '';
+    width:100%;
+    height:30px;
+}
+form .q {
+    background-color: #9DC45F;
+    border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-border-radius: 5px;
+    border: none;
+    padding: 10px 25px 10px 25px;
+    color: #FFF;
+    text-shadow: 1px 1px 1px #949494;
+}
+form .q:hover {
+    background-color:#80A24A;
+}
+
