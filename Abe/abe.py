@@ -211,6 +211,7 @@ class Abe:
     def __call__(abe, env, start_response):
         import urlparse
 
+        env['PATH_INFO'] = escape(env['PATH_INFO'], quote=True)
         page = {
             "status": '200 OK',
             "title": [escape(ABE_APPNAME), " ", ABE_VERSION],
